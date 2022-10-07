@@ -1,5 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using SATCFDITEST.Models.Entity;
+﻿    using Microsoft.EntityFrameworkCore;
+    using SATCFDITEST.Models.Entity;
 
 namespace SATCFDITEST.Data
 {
@@ -10,7 +10,7 @@ namespace SATCFDITEST.Data
 
         public MyAppDbContext(DbContextOptions<MyAppDbContext> options) : base(options)
         {
-        
+         
         }
 
     }

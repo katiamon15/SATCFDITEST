@@ -37,7 +37,7 @@ foreach (Complemento resultado in resultados)
 }
 
 
-/*CancellationTokenSource cancellationTokenSource = new();
+CancellationTokenSource cancellationTokenSource = new();
 CancellationToken cancellationToken = cancellationTokenSource.Token;
 
 await host.StartAsync(cancellationToken);
@@ -96,7 +96,7 @@ var solicitudRequest = SolicitudRequest.CreateInstance(fechaInicio,
     rfcSolicitante,
     autenticacionResult.AccessToken);
 
-logger.LogInformation("Enviando solicitud de solicitud de descarga.");
+/*logger.LogInformation("Enviando solicitud de solicitud de descarga.");
 SolicitudResult solicitudResult = await solicitudService.SendSoapRequestAsync(solicitudRequest, certificadoSat, cancellationToken);
 
 if (string.IsNullOrEmpty(solicitudResult.RequestId))
