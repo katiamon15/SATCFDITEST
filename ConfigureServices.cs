@@ -14,6 +14,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore.Internal;
 using static System.Formats.Asn1.AsnWriter;
 using SATCFDITEST.Models.Entity;
+using System.Net;
+using System.Reflection.Metadata;
 
 IHost host = Host.CreateDefaultBuilder()
     .ConfigureServices((context,services)=> {
@@ -50,14 +52,6 @@ logger.LogInformation("Iniciando ejemplo de como utilizar los servicios para des
 var rutaCertificadoPfx = @"C:\llavero\key.pfx";
 byte[] certificadoPfx = await File.ReadAllBytesAsync(rutaCertificadoPfx, cancellationToken);
 var certificadoPassword = "23a24c15k";
-DateTime fechaInicio= DateTime.Today;
-DateTime fechaFin= DateTime.Today;
-TipoSolicitud? tipoSolicitud = TipoSolicitud.Cfdi;
-var rfcEmisor = "";
-var rfcReceptores = new List<string> { "IPL151012RPA" };
-var rfcSolicitante = "IPL151012RPA";
-
-
 
 logger.LogInformation("Creando el certificado SAT con el certificado PFX y contrasena.");
 X509Certificate2 certificadoSat = X509Certificate2Helper.GetCertificate(certificadoPfx, certificadoPassword);
@@ -83,7 +77,33 @@ if (!autenticacionResult.AccessToken.IsValid)
 
 logger.LogInformation("La solicitud de autenticacion fue exitosa. AccessToken:{0}", autenticacionResult.AccessToken.DecodedValue);
 
-// Solicitud
+
+//private void creaSolicitudAlmacen(){}
+
+
+
+
+// Metodo solicitud Solicitud
+// Primero llamar al metodo para crear y almacenar en base de datos
+//Datos desde el front
+DateTime fechaInicio = DateTime.Today;
+DateTime fechaFin = DateTime.Today;
+TipoSolicitud? tipoSolicitud = TipoSolicitud.Cfdi;
+var rfcEmisor = "";
+var rfcReceptores = new List<string> { "IPL151012RPA" };
+var rfcSolicitante = "IPL151012RPA";
+
+SolicitudArhivo solicitudEntity = new SolicitudArhivo();
+solicitudEntity.FechaInicial = fechaInicio;
+solicitudEntity.FechaFin = fechaFin;
+solicitudEntity.rfcEmisor = rfcEmisor;
+solicitudEntity.rfcReceptores = rfcReceptores[0];
+solicitudEntity.rfcSolicitante = rfcSolicitante;
+solicitudEntity.TipoSolicitud = tipoSolicitud.Value;
+solicitudEntity.Complemento=1;
+
+//solicitudEntity.uuid = "111AAA1A-1AA1-1A11-11A1-11A1AA111A11";
+
 logger.LogInformation("Buscando el servicio de solicitud de descarga en el contenedor de servicios (Dependency Injection).");
 var solicitudService = host.Services.GetRequiredService<ISolicitudService>();
 
@@ -96,8 +116,26 @@ var solicitudRequest = SolicitudRequest.CreateInstance(fechaInicio,
     rfcSolicitante,
     autenticacionResult.AccessToken);
 
-/*logger.LogInformation("Enviando solicitud de solicitud de descarga.");
-SolicitudResult solicitudResult = await solicitudService.SendSoapRequestAsync(solicitudRequest, certificadoSat, cancellationToken);
+logger.LogInformation("Enviando solicitud de solicitud de descarga.");
+//SolicitudResult solicitudResult = await solicitudService.SendSoapRequestAsync(solicitudRequest, certificadoSat, cancellationToken);
+
+SolicitudResult solicitudResult = SolicitudResult.CreateInstance("490f9e0d-2fa2-4a82-aa48-7c729e118eaf",
+    "5000", "Solicitud aceptada", HttpStatusCode.Accepted, "Mensaje respuesta SAT");
+
+
+solicitudEntity.IdSolicitudSat = solicitudResult.RequestId;
+solicitudEntity.CodEstatus = solicitudResult.RequestStatusCode;
+solicitudEntity.Mensaje = solicitudResult.RequestStatusMessage;
+
+try
+{
+    context.SolicitudArhivo.Add(solicitudEntity);
+    //context.SaveChanges();
+}catch (Exception e)
+{
+    Console.WriteLine(e.InnerException.Message);
+    throw new Exception("Problemas al insertar en la base de datos");
+}
 
 if (string.IsNullOrEmpty(solicitudResult.RequestId))
 {
@@ -107,4 +145,4 @@ if (string.IsNullOrEmpty(solicitudResult.RequestId))
     throw new Exception();
 }
 
-logger.LogInformation("La solicitud de solicitud de descarga fue exitosa. RequestId:{0}", solicitudResult.RequestId);*/
+logger.LogInformation("La solicitud de solicitud de descarga fue exitosa. RequestId:{0}", solicitudResult.RequestId);
