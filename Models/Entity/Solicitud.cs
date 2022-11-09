@@ -17,7 +17,7 @@ namespace SATCFDITEST.Models.Entity
         public string rfcReceptores { get; set;}
         public string rfcSolicitante { get; set;}
         public int TipoSolicitud { get; set; }
-        public int TipoComprobante { get; set; }
+        public string TipoComprobante { get; set; }
         public int EstadoComprobante { get; set;}
         public int  Complemento { get; set; }
         public byte[] signature { get; set; }

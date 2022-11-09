@@ -17,8 +17,15 @@ using SATCFDITEST.Models.Entity;
 using System.Net;
 using System.Reflection.Metadata;
 using SATCFDITEST.Service;
+using System.Xml.Serialization;
+using Microsoft.IdentityModel.Tokens;
+using RazorEngineCore;
+using System.Diagnostics;
+using SATCFDITEST.CFDI4;
+using System.Xml;
 
-IHost host = Host.CreateDefaultBuilder()
+
+/*IHost host = Host.CreateDefaultBuilder()
     .ConfigureServices((context,services)=> {
         var cns = "Data Source= .; Initial Catalog = master; Integrated security= True"; 
         services.AddDbContext<MyAppDbContext>(options => {
@@ -69,7 +76,7 @@ var autenticacionRequest = AutenticacionRequest.CreateInstance();
 logger.LogInformation("Enviando solicitud de autenticacion.");
 AutenticacionResult autenticacionResult =
     await autenticacionService.SendSoapRequestAsync(autenticacionRequest, certificadoSat, cancellationToken);
-
+ 
 if (!autenticacionResult.AccessToken.IsValid)
 {
     logger.LogError("La solicitud de autenticacion no fue exitosa. FaultCode:{0} FaultString:{1}",
@@ -97,7 +104,7 @@ var rfcSolicitante = "IPL151012RPA";
 
 
 
-//solicitudEntity.uuid = "111AAA1A-1AA1-1A11-11A1-11A1AA111A11";
+//solicitudEntity.uuid = "";
 
 logger.LogInformation("Buscando el servicio de solicitud de descarga en el contenedor de servicios (Dependency Injection).");
 var solicitudService = host.Services.GetRequiredService<ISolicitudService>();
@@ -112,10 +119,10 @@ var solicitudRequest = SolicitudRequest.CreateInstance(fechaInicio,
     autenticacionResult.AccessToken);
 
 logger.LogInformation("Enviando solicitud de solicitud de descarga.");
-SolicitudResult solicitudResult = await solicitudService.SendSoapRequestAsync(solicitudRequest, certificadoSat, cancellationToken);
+//SolicitudResult solicitudResult = await solicitudService.SendSoapRequestAsync(solicitudRequest, certificadoSat, cancellationToken);
 
-/*SolicitudResult solicitudResult = SolicitudResult.CreateInstance("a804e8a7-efac-4333-92ac-83a79c649f2d",
-    "5000", "Solicitud aceptada", HttpStatusCode.Accepted, "Mensaje respuesta SAT");*/
+SolicitudResult solicitudResult = SolicitudResult.CreateInstance("C223B7CC-0576-4411-8694-D1DA74D06007",
+    "5000", "Solicitud aceptada", HttpStatusCode.Accepted, "Mensaje respuesta SAT");
 
 SolicitudArhivo solicitudEntity = new SolicitudArhivo();
 solicitudEntity.FechaInicial = fechaInicio;
@@ -130,7 +137,7 @@ solicitudEntity.CodEstatus = solicitudResult.RequestStatusCode;
 solicitudEntity.Mensaje = solicitudResult.RequestStatusMessage;
 
 try
-{
+ {
     context.SolicitudArhivo.Add(solicitudEntity);
     context.SaveChanges();
 }catch (Exception e)
@@ -231,11 +238,196 @@ foreach (string? idsPaquete in verificacionResult.PackageIds)
     string fileName = Path.Combine(rutaDescarga, $"{idsPaquete}.zip");
     byte[] paqueteContenido = Convert.FromBase64String(descargaResult.Package);
 
-    logger.LogInformation("Guardando paquete descargado en un archivo .zip en la ruta de descarga.");
+    logger.LogInformation("Guardando paquete descargado en un archivo .zip en la ruta  de descarga.");
     using FileStream fileStream = File.Create(fileName, paqueteContenido.Length);
     await fileStream.WriteAsync(paqueteContenido, 0, paqueteContenido.Length, cancellationToken);
 }
 
 await host.StopAsync(cancellationToken);
 
-logger.LogInformation("Proceso terminado.");
+logger.LogInformation("Proceso terminado.");*/
+
+
+
+//transformacion PDF 3.3
+
+// 1 paso leer el xml pasar timbrado a una clase
+
+
+string pathxml = @"C:\Users\nousfera\Documents\Descarga CFDI\4.0\f2bc39fc-2a47-4593-a7cd-88e4dedd50bc.xml";
+
+XmlDocument doc = new XmlDocument();
+doc.Load(pathxml);
+
+XmlNodeList elemList = doc.GetElementsByTagName("cfdi:Comprobante");
+XmlAttributeCollection atributos = elemList[0].Attributes;
+string version = "";
+for (int j = 0; j < atributos.Count; j++)
+{
+    if (atributos[j].Name == "Version")
+    {
+        version = atributos[j].Value;
+    }
+    
+}
+
+Console.WriteLine(version);
+
+if (version == "4.0")
+{
+    SATCFDITEST.CFDI4.Comprobante ocomprobantes = new SATCFDITEST.CFDI4.Comprobante();
+    XmlSerializer oSerializer = new XmlSerializer(typeof(SATCFDITEST.CFDI4.Comprobante));
+
+    using (StreamReader reader = new StreamReader(pathxml))
+    {
+        //aqui desearilizamos
+        ocomprobantes = (SATCFDITEST.CFDI4.Comprobante)oSerializer.Deserialize(reader);  //fallo aqui 
+
+        //complementos
+        var oComplemento = ocomprobantes.Complemento;
+        
+            foreach (var complementointerior in oComplemento.Any)
+            {
+                if (complementointerior.Name.Contains("TimbreFiscalDigital"))
+
+                //iftipo comprobante == "I"
+                //else{new Exception("El documento XML no es un ingreso")}
+
+                {
+                    XmlSerializer oSerializerComplemento = new XmlSerializer(typeof(TimbreFiscalDigital));
+
+                    using (var readerComplemento = new StringReader(complementointerior.OuterXml))
+                    {
+                        ocomprobantes.TimbreFiscalDigital =
+                            (TimbreFiscalDigital)oSerializerComplemento.Deserialize(readerComplemento);
+                    }
+                }
+
+            }
+        
+    }//using
+
+
+    //paso 2 proceso de lectura apñicandolo con razor y haciendo pdf  
+
+    string path = AppDomain.CurrentDomain.BaseDirectory;
+    string pathHTMLTemp = path + "mihtml.html"; //temporal 
+    string pathplantilla = path + "Plantilla.html";
+    string shtml = Razor.GetStringOffile(pathplantilla);
+    string resulthtml = "";
+    //resulthtml = RazorEngineCore.Razor.Parse(shtml, ocomprobante);
+
+    IRazorEngine razorEngine = new RazorEngine();
+    IRazorEngineCompiledTemplate template = razorEngine.Compile(shtml);
+
+    string result = template.Run(ocomprobantes);
+
+
+    Console.WriteLine(result);
+    Console.Read();
+
+    //creamos el temporal
+    File.WriteAllText(pathHTMLTemp, result);
+
+    string pathhtmlpdf = @"C:\SATCFDITEST\wkhtmltopdf\wkhtmltopdf.exe";
+
+    ProcessStartInfo oprocessStartInfo = new ProcessStartInfo();
+    oprocessStartInfo.UseShellExecute = false;
+    oprocessStartInfo.FileName = pathhtmlpdf;
+    oprocessStartInfo.Arguments = "mihtml.html mipdf.pdf";
+
+    using (Process oProcess = Process.Start(oprocessStartInfo))
+    {
+        oProcess.WaitForExit();
+    }
+
+
+    //elimminar el temporral
+    File.Delete(pathHTMLTemp);
+}
+else if (version == "3.3")
+{
+    Comprobante ocomprobante = new Comprobante();
+    XmlSerializer oSerializer = new XmlSerializer(typeof(Comprobante));
+
+    using (StreamReader reader = new StreamReader(pathxml))
+    {
+        //aqui desearilizamos
+        ocomprobante = (Comprobante)oSerializer.Deserialize(reader);
+
+        //complementos
+        foreach (var oComplemento in ocomprobante.Complemento)
+        {
+            foreach (var ocomplementointerior in oComplemento.Any)
+            {
+                if (ocomplementointerior.Name.Contains("TimbreFiscalDigital"))
+
+                //iftipo comprobante == "I"
+                //else{new Exception("El documento XML no es un ingreso")}
+
+                {
+                    XmlSerializer oSerializerComplemento = new XmlSerializer(typeof(TimbreFiscalDigital));
+
+                    using (var readerComplemento = new StringReader(ocomplementointerior.OuterXml))
+                    {
+                        ocomprobante.TimbreFiscalDigital =
+                            (TimbreFiscalDigital)oSerializerComplemento.Deserialize(readerComplemento);
+                    }
+                }
+
+            }
+        }
+    }//using
+
+
+    //paso 2 proceso de lectura apñicandolo con razor y haciendo pdf  
+
+    string path = AppDomain.CurrentDomain.BaseDirectory;
+    string pathHTMLTemp = path + "mihtml.html"; //temporal 
+    string pathplantilla = path + "Plantilla.html";
+    string shtml = Razor.GetStringOffile(pathplantilla);
+    string resulthtml = "";
+    //resulthtml = RazorEngineCore.Razor.Parse(shtml, ocomprobante);
+
+    IRazorEngine razorEngine = new RazorEngine();
+    IRazorEngineCompiledTemplate template = razorEngine.Compile(shtml);
+
+    string result = template.Run(ocomprobante);
+
+
+    Console.WriteLine(result);
+    Console.Read();
+
+    //creamos el temporal
+    File.WriteAllText(pathHTMLTemp, result);
+
+    string pathhtmlpdf = @"C:\SATCFDITEST\wkhtmltopdf\wkhtmltopdf.exe";
+
+    ProcessStartInfo oprocessStartInfo = new ProcessStartInfo();
+    oprocessStartInfo.UseShellExecute = false;
+    oprocessStartInfo.FileName = pathhtmlpdf;
+    oprocessStartInfo.Arguments = "mihtml.html mipdf.pdf";
+
+    using (Process oProcess = Process.Start(oprocessStartInfo))
+    {
+        oProcess.WaitForExit();
+    }
+
+
+    //elimminar el temporral
+    File.Delete(pathHTMLTemp);  
+}
+else {
+    Console.WriteLine("Error en la version");
+}
+
+
+public class Razor
+{
+    public static string GetStringOffile(string pathFile)
+    {
+        string contenido = File.ReadAllText(pathFile);
+        return contenido;
+    }
+
+}

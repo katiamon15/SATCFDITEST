@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8">
+    <title>
+
+    </title>
+</head>
+<body style="font-family:Arial;">
+    <div>
+        <div style="width:50%;float:left;">
+
+        </div>
+        <div style="width:50%;float:left;">
+            <label>@Model.Emisor.Nombre</label><br />
+            <label>@Model.Emisor.Rfc</label><br />
+            <label>@Model.Folio</label>
+            <label>Folio fiscal: @Model.TimbreFiscalDigital.UUID</label>
+        </div>
+        <div style="clear:both;"></div>
+
+    </div>
+
+    <br />
+    <div>
+        Cliente: @Model.Receptor.Rfc -
+        @if(Model.Receptor.Nombre != null ){
+        @Model.Receptor.Nombre
+        }
+
+    </div>
+
+
+    <br />
+    <div>
+        <div>
+            <table style="width:100%;" class="tabla">
+                <tr>
+                    <th>Cantidad</th>
+                    <th>Clave</th>
+                    <th>Descripción</th>
+                    <th>Precio</th>
+                    <th>Total</th>
+                </tr>
+                @foreach(var oConcepto in Model.Conceptos){
+                <tr>
+                    <td>@oConcepto.Cantidad</td>
+                    <td>@oConcepto.ClaveProdServ</td>
+                    <td>@oConcepto.Descripcion</td>
+                    <td>@oConcepto.Importe</td>
+                    <td>@(oConcepto.Cantidad*oConcepto.Importe)</td>
+                </tr>
+
+                if(oConcepto.Impuestos !=null){
+                <tr>
+                    <td>
+                        Impuestos Trasladados
+                    </td>
+                    <td colspan="4">
+
+                        @foreach(var oTraslado in oConcepto.Impuestos.Traslados){
+                        @oTraslado.Importe
+                        }
+
+                    </td>
+                </tr>
+                }
+
+                }
+                <tr>
+                    <td colspan="3"></td>
+                    <td>Subtotal:</td>
+                    <td>$ @Model.SubTotal</td>
+
+
+                </tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td>Descuento:</td>
+                    <td>$ @Model.Descuento</td>
+                </tr>
+                <tr>
+                    <td colspan="3"></td>
+                    <td>Total:</td>
+                    <td>$ @Model.Total</td>
+                </tr>
+            </table> 
+        </div>
+    </div>
+
+    <br />
+    <div class="textoContiguo" style="font-size:11px;">
+        @Model.MonedaConLetra
+    </div>
+     
+    <br />
+    <div class="textoContiguo" style="font-size:11px;">
+        @Model.Sello
+    </div>
+
+    <br />
+    <div>
+        <div style="width:50%;float:left;">
+            <img src="@Model.QR" width="250" height="250" />
+
+        </div>
+        <div style="width:50%;float:left;"></div>
+        <div style="clear:both;"></div>
+    </div>
+
+</body>
+
+<style>
+    .tabla th {
+        border-bottom: 1px solid #000;
+    }
+
+
+    .textoContiguo {
+        -ms-word-break: break-all;
+        word-break: break-all;
+        word-break: break-word; /* Sólo WebKit -NO DOCUMENTADO */
+        -ms-hyphens: auto; /* Guiones para separar en sílabas */
+        -moz-hyphens: auto; /*  depende de lang en <html>      */
+        -webkit-hyphens: auto;
+        hyphens: auto;
+    }
+</style><style>
+    .tabla th {
+        border-bottom: 1px solid #000;
+    }
+
+
+    .textoContiguo {
+        -ms-word-break: break-all;
+        word-break: break-all;
+        word-break: break-word; /* Sólo WebKit -NO DOCUMENTADO */
+        -ms-hyphens: auto; /* Guiones para separar en sílabas */
+        -moz-hyphens: auto; /*  depende de lang en <html>      */
+        -webkit-hyphens: auto;
+        hyphens: auto;
+    }
+</style>
+
+ 
+</html>
